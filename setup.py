@@ -12,13 +12,10 @@ install_requires = [
 ]
 
 tests_requires = [
-    'pytest',
-    'bandit',         # python security audit
+    'pytest>=5.4.1',
+    'bandit',
     'flake8',
     'coverage',
-    'responses',
-    'vcrpy',
-    'pytest-recording',
     'pytest-cov',
     'pytest-pep8',
     'pytest-flake8',
