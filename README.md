@@ -5,6 +5,7 @@ Inventory library for VMware (Vsphere Release)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Build Status](https://travis-ci.org/multi-cloud-explorer/mce-lib-vsphere.svg)](https://travis-ci.org/multi-cloud-explorer/mce-lib-vsphere)
 [![Coverage Status](https://coveralls.io/repos/github/multi-cloud-explorer/mce-lib-vsphere/badge.svg?branch=master)](https://coveralls.io/github/multi-cloud-explorer/mce-lib-vsphere?branch=master)
+[![codecov](https://codecov.io/gh/multi-cloud-explorer/mce-lib-vsphere/branch/master/graph/badge.svg)](https://codecov.io/gh/multi-cloud-explorer/mce-lib-vsphere)
 [![Code Health](https://landscape.io/github/multi-cloud-explorer/mce-lib-vsphere/master/landscape.svg?style=flat)](https://landscape.io/github/multi-cloud-explorer/mce-lib-vsphere/master)
 [![Requirements Status](https://requires.io/github/multi-cloud-explorer/mce-lib-vsphere/requirements.svg?branch=master)](https://requires.io/github/multi-cloud-explorer/mce-lib-vsphere/requirements/?branch=master)
 
