@@ -1,0 +1,26 @@
+os: linux
+dist: xenial
+language: python
+
+python:
+  - "3.7"
+
+jobs:
+  include:
+    - name: "Python 3.7 on Linux Ubuntu"
+      python: 3.7
+
+before_install:
+  - python -m pip install --upgrade pip
+
+install:
+  - pip install -e .[tests,dev]
+  - pip install -U coveralls
+  - pip install -U codecov
+
+script:
+  - pytest
+
+after_success:
+  - coveralls
+  - codecov
