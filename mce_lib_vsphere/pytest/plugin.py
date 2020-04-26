@@ -1,5 +1,3 @@
-import os
-
 import shutil
 import signal
 import subprocess as sp
@@ -10,10 +8,12 @@ from pyVim import connect
 
 import pytest
 
-CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
-VCSIM_PATH = os.path.join(CURRENT_DIR, 'utils', 'vcsim')
+def pytest_configure(config):
+    config.addinivalue_line("markers", "mce_known_bug: mark test as known bug")
+    config.addinivalue_line("markers", "mce_todo: mark todo")
 
 def get_free_tcp_port(port=1024, max_port=65535):
+    """Return free tcp port"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while port <= max_port:
         try:
@@ -26,7 +26,9 @@ def get_free_tcp_port(port=1024, max_port=65535):
 
 @pytest.fixture(scope="session")
 def vcsim_settings():
-    vcsim_path = shutil.which('vcsim') or VCSIM_PATH
+    vcsim_path = shutil.which('vcsim')
+    if  not vcsim_path:
+        raise AssertionError("vcsim tools is not found")
     return dict(
         vcsim_path=vcsim_path,
         api_version="6.5",

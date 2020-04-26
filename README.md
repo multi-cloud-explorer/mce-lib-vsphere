@@ -94,11 +94,32 @@ pprint(client.vcenter_infos())
 
 client.disconnect()
 ```
+### Pytest plugin
+
+```python
+# conftest.py
+pytest_plugins = ['mce_lib_vsphere.pytest.plugin']
+
+# test_yourtest.py
+
+import pytest
+
+from pyVmomi import vim
+
+from mce_lib_vsphere import core
+
+def test_get_all_vms(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_vms()
+```
 
 ### TODO
 
 - [ ] Publish to Pypi repository
 - [ ] Sphinx doc
-- [ ] Terraform templates
+- [ ] Terraform templates ou Pulumi code for IAC
 - [ ] Contrib doc
 
