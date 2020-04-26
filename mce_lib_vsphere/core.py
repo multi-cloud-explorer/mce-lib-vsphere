@@ -4,62 +4,44 @@ import traceback
 import re
 import json
 from typing import List, Tuple, Any, Mapping, Union
+from enum import IntEnum, unique
 
 import typic
-import arrow
 from decouple import config
 from furl import furl
 
 from pyVim.connect import Disconnect
 from pyVim.connect import SmartConnect
-from pyVmomi import vmodl  # VMODL: VMware Managed Object Design Language
 from pyVmomi import vim, VmomiSupport
+from pyVmomi import Iso8601
 
 import requests
 
-# TODO: typical 2.x : typic.api.strict_mode()
+from  .exceptions import *
+
+#FIXME: typic.api.strict_mode()
 
 logger = logging.getLogger(__name__)
 
 VCENTER_URL = config('MCE_VCENTER_URL', 'https://user1:pass@127.0.0.1:8989/sdk?timeout=120')
-VCENTER_TIMEOUT = config("MCE_VCENTER_TIMEOUT", default=60, cast=int)  # 1mn
 
-# TODO: se in get_vm_roles
-ROLES = {
-    -1: "Administrator",
-    -4: "Anonymous",
-    -5: "No Access",
-    -2: "Read-Only",
-    -3: "View",
-}
+@unique
+class EffectiveRoles(IntEnum):
+    ADMINISTRATOR = -1
+    READ_ONLY = -2
+    VIEW = -3
+    ANONYMOUS = -4
+    NO_ACCESS = -5
 
-# TODO: move to exceptions module
-class FatalError(Exception):
-    pass
+    @classmethod
+    def to_choices(cls, reverse=False):
+        return [(e.value, e.name) for e in cls]
 
-
-class ConnectionError(Exception):
-    pass
-
-
-class VmNotFoundError(FatalError):
-    pass
-
-
-class NotPoweredError(FatalError):
-    pass
-
-
-class NotValidToolsError(FatalError):
-    pass
-
-
-class AuthenticationError(FatalError):
-    pass
-
-
-class GuestError(FatalError):
-    pass
+    @classmethod
+    def to_dict(cls, reverse=False):
+        if reverse:
+            return {e.value: e.name for e in cls}
+        return {e.name: e.value for e in cls}
 
 
 class Client:
@@ -76,7 +58,7 @@ class Client:
         is_ssl=True,
         verify: bool = True,
         debug: bool = False,
-        timeout: int = VCENTER_TIMEOUT,
+        timeout: int = 60,
     ):
         """
         Connect to a vCenter via the API
@@ -116,7 +98,7 @@ class Client:
         self.password = password
         self.is_ssl = is_ssl
         self.verify = verify
-        self.timeout = timeout or VCENTER_TIMEOUT
+        self.timeout = timeout
         self.pool_size = 5
         self.debug = debug
 
@@ -214,24 +196,30 @@ class Client:
             self.content = si.RetrieveContent()
             self.is_connected = True
 
-            return (self.si, self.content)
+            return self.si, self.content
 
         except IOError as e:
-            raise IOError("I/O error({0}): {1}".format(e.errno, e.strerror))
+            if self.debug:
+                traceback.print_exc()
+            msg = f"Connection could not be established for host [{self.host}:{self.port}] with timeout [{self.timeout}]"
+            logger.error(msg)
+            raise ConnectionError(msg)
+            #raise IOError("I/O error({0}): {1}".format(e.errno, e.strerror))
         except vim.fault.InvalidLogin:
             # 'Cannot complete login due to an incorrect user name or password.'
             msg = f"invalid authentication for [{self.username}]"
             raise AuthenticationError(msg)
-        except vmodl.MethodFault as e:
-            if self.debug:
-                traceback.print_exc()
-            msg = f"Connection could not be established for host [{self.host}:{self.port}] with timeout [{self.timeout}]"
-            raise ConnectionError(msg)
-        except Exception as e:
+        # except vmodl.MethodFault as e:
+        #     if self.debug:
+        #         traceback.print_exc()
+        #     msg = f"Connection could not be established for host [{self.host}:{self.port}] with timeout [{self.timeout}]"
+        #     raise ConnectionError(msg)
+        except Exception as err:
             self.is_connected = False
             if self.debug:
                 traceback.print_exc()
-            raise
+            # TODO: add fields
+            raise FatalError(str(err))
 
     @typic.al
     def dump_to_dict(self, obj) -> Mapping:
@@ -246,7 +234,7 @@ class Client:
     def resource_id(self, obj) -> str:
         """Build unique ID with obj._moId and parents"""
 
-        # TODO: version avec que l'id sans le typee avant
+        # TODO: version avec que l'id sans le type avant
         parents = []
         self.recursive_parents(obj, parents)
         return "/".join([p._moId for p in parents]).lower()
@@ -255,10 +243,8 @@ class Client:
     def get_object_by_name(
         self, object_type: object, name: Union[str, re.Pattern], regex: bool = False
     ):
-        """
-        Get the vsphere object associated with a given text name
-        Source: https://github.com/rreubenur/vmware-pyvmomi-examples/blob/master/create_template.py
-        """
+
+        # TODO: add filter -> https://github.com/vmware/pyvmomi-community-samples/blob/39bd95553df337ae35f1b101c487b37063967555/samples/filter_vms.py#L50
         container = self.content.viewManager.CreateContainerView(
             self.content.rootFolder, [object_type], True
         )
@@ -284,7 +270,7 @@ class Client:
             "licenseProductVersion": about.licenseProductVersion,  # '6.0'
         }
 
-    def get_current_session(self) -> Mapping:
+    def get_current_session(self): # -> Mapping:
         currentSession = self.content.sessionManager.currentSession
         fields = [
             "userName",  # 'MyUserName'
@@ -296,29 +282,38 @@ class Client:
             "callCount"
         ]
         data = {field: getattr(currentSession, field, None) for field in fields}
-        data["loginTime"] = arrow.get(data["loginTime"]).for_json()
+        data["loginTime"] = Iso8601.ISO8601Format(data["loginTime"])
+        # TODO: data["loginTime"] = arrow.get(login_time, "YYYY-MM-DD[T]HH:mm:ss.S").datetime
         return data
 
     @typic.al(delay=True)
-    def get_vm_by_name(
-        self, name: str, regex: bool = True, raise_error: bool = False
-    ) -> vim.VirtualMachine:
+    def search_vm_by_uuid(self, uuid: str, by_instance_uuid: bool = True) -> vim.VirtualMachine:
+        """Search VirtualMachine by Instance UUID or Bios UUID
+
+        Return None if  not found
+        """
+
+        search_index = self.content.searchIndex
+        return search_index.FindByUuid(None, uuid, True, by_instance_uuid)
+
+    @typic.al
+    def get_vm_by_name(self, name: str, raise_error: bool = False) -> vim.VirtualMachine:
         """
         Get a VM by its name
         """
         # TODO: il peut y en avoir plusieurs ?
         search = re.compile("^%s$" % name, re.IGNORECASE)
-        vm = self.get_object_by_name(vim.VirtualMachine, search, regex=regex)
+        vm = self.get_object_by_name(vim.VirtualMachine, search, regex=True)
         if not vm and raise_error:
             msg = f"vm [{name}] not found in vcenter [{self.host}:{self.port}] for username [{self.username}]"
             raise VmNotFoundError(msg)
         return vm
 
     # FIXME: object_type: LazyType
-    @typic.al(delay=True)
+    #@typic.al(delay=True)
     def get_all(
         self, container: Any, object_type: object, recursive=True
-    ) -> List[Any]:
+    ): # -> List[Any]
         """
         Get all items of a certain type
         Example: get_all(content, vim.Datastore) return all datastore objects
@@ -489,8 +484,11 @@ class Client:
 
     @typic.al
     def get_vm_roles(self, vm: vim.VirtualMachine) -> List[Any]:
-        # TODO: return type
-        return list(vm.effectiveRole)
+        roles_by_value = EffectiveRoles.to_dict(True)
+        roles = []
+        for role in vm.effectiveRole:
+            roles.append(roles_by_value[role])
+        return roles
 
     def get_cluster_infos(self, cluster) -> Mapping:
         return {
@@ -587,53 +585,29 @@ class Client:
                     i = i+1
         return nics
 
-    # def getNICs2(self, summary, guest):
-    #     nics = {}
-    #     for nic in guest.net:
-    #         if nic.network:  # Only return adapter backed interfaces
-    #             if nic.ipConfig is not None and nic.ipConfig.ipAddress is not None:
-    #                 nics[nic.macAddress] = {}  # Use mac as uniq ID for nic
-    #                 nics[nic.macAddress]['netlabel'] = nic.network
-    #                 ipconf = nic.ipConfig.ipAddress
-    #                 i = 0
-    #                 nics[nic.macAddress]['ipv4'] = {}
-    #                 for ip in ipconf:
-    #                     if ":" not in ip.ipAddress:  # Only grab ipv4 addresses
-    #                         nics[nic.macAddress]['ipv4'][i] = ip.ipAddress
-    #                         nics[nic.macAddress]['prefix'] = ip.prefixLength
-    #                         nics[nic.macAddress]['connected'] = nic.connected
-    #                 i = i+1
-    #     return nics
-
-    """
-		data = {
-			"session": client.get_current_session(),
-			"vcenter": client.vcenter_infos(),
-		}
-
-    """
-
     @typic.al
     def _get_vm_infos(self, vm: vim.VirtualMachine) -> Mapping:
         summary = vm.summary
         guest = vm.guest
-        #vm_config = vm.config
-        vmsum = {}
         config = summary.config
-        net = self.getNICs(summary, guest)
-        vmsum['name'] = vm.name
+
+        vmsum = {}
+        vmsum['name'] = vm.name # TODO: vérifier si vm.name et config.name sont toujours pareil
+        vmsum['uuid'] = config.instanceUuid
+        vmsum['bios_uuid'] = config.uuid
         vmsum['hostname'] = vm.guest.hostName
         vmsum['is_template'] = config.template
         vmsum['mem'] = config.memorySizeMB / 1024
         vmsum['diskGB'] = summary.storage.committed / 1024**3
         vmsum['cpu'] = config.numCpu
-        vmsum['path'] = config.vmPathName
+        vmsum['path'] = config.vmPathName# '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx'
         vmsum['ostype'] = config.guestFullName
         vmsum['state'] = summary.runtime.powerState
         vmsum['annotation'] = config.annotation if config.annotation else ''
-        vmsum['net'] = net
+        vmsum['net'] = self.getNICs(summary, guest)
         vmsum['fields'] = self.get_custom_fields(vm)
-        vmsum['boot_time'] = summary.runtime.bootTime # FIXME: arrow.get(summary.runtime.bootTime).for_json()
+        #vmsum['boot_time'] = summary.runtime.bootTime # FIXME: arrow.get(summary.runtime.bootTime).for_json()
+        vmsum['boot_time'] = Iso8601.ISO8601Format(summary.runtime.bootTime)
 
         vmsum['guestFamily'] = guest.guestFamily    # 'otherGuestFamily',
         vmsum['toolsVersion'] = guest.toolsVersion  # '2147483647',
