@@ -19,7 +19,7 @@ install:
   - pip install -U codecov
 
 script:
-  - pytest -m 'not mce_known_bug' -m 'not mce_todo'
+  - pytest -m 'not mce_todo' -x
 
 after_success:
   - coveralls
