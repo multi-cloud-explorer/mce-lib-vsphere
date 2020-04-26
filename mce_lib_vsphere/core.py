@@ -130,7 +130,12 @@ class Client:
 
     @typic.al
     def parse_url(self, url: str):
-        """Parse settings with URL"""
+        """Parse settings with URL
+
+        Args:
+            url: Full url for connect to Vcenter
+
+        """
 
         url = furl(url)
 
@@ -301,6 +306,7 @@ class Client:
         """
         Get a VM by its name
         """
+        # TODO: il peut y en avoir plusieurs ?
         search = re.compile("^%s$" % name, re.IGNORECASE)
         vm = self.get_object_by_name(vim.VirtualMachine, search, regex=regex)
         if not vm and raise_error:
@@ -353,6 +359,9 @@ class Client:
     
     @typic.al
     def get_all_datacenters(self) -> List[vim.Datacenter]:
+        """
+        Get all datacenter on a vCenter
+        """
         return self.get_all(self.content.rootFolder, vim.Datacenter)
 
     @typic.al
@@ -370,20 +379,6 @@ class Client:
         return self.get_all(self.content.rootFolder, vim.VirtualMachine)
 
     @typic.al
-    def get_hosts_in_datacenter(self, datacenter) -> List[vim.HostSystem]:
-        """
-        Get all hosts belonging to a given datacenter
-        """
-        return self.get_all(datacenter, vim.HostSystem)
-
-    @typic.al
-    def get_vms_in_datacenter(self, datacenter) -> List[vim.VirtualMachine]:
-        """
-        Get all vms belonging to a given datacenter
-        """
-        return self.get_all(datacenter, vim.VirtualMachine)
-
-    @typic.al
     def get_all_dvswitches(self) -> List[vim.DistributedVirtualSwitch]:
         """
         Get all the distributed switches
@@ -398,6 +393,55 @@ class Client:
         return self.get_all(
             self.content.rootFolder, vim.dvs.DistributedVirtualPortgroup
         )
+
+    @typic.al
+    def get_all_virtualapps(self) -> List[vim.VirtualApp]:
+        """
+        Get all VirtualApp
+        """
+        return self.get_all(self.content.rootFolder, vim.VirtualApp)
+
+    @typic.al
+    def get_all_networks(self) -> List[vim.Network]:
+        """
+        Get all Network
+        """
+        return self.get_all(self.content.rootFolder, vim.Network)
+
+    @typic.al
+    def get_all_opaque_networks(self) -> List[vim.OpaqueNetwork]:
+        """
+        Get all OpaqueNetwork
+        """
+        return self.get_all(self.content.rootFolder, vim.OpaqueNetwork)
+
+    @typic.al
+    def get_all_compute_resources(self) -> List[vim.ComputeResource]:
+        """
+        Get all ComputeResource
+        """
+        return self.get_all(self.content.rootFolder, vim.ComputeResource)
+
+    @typic.al
+    def get_all_storage_pods(self) -> List[vim.StoragePod]:
+        """
+        Get all StoragePod
+        """
+        return self.get_all(self.content.rootFolder, vim.StoragePod)
+
+    @typic.al
+    def get_hosts_in_datacenter(self, datacenter) -> List[vim.HostSystem]:
+        """
+        Get all hosts belonging to a given datacenter
+        """
+        return self.get_all(datacenter, vim.HostSystem)
+
+    @typic.al
+    def get_vms_in_datacenter(self, datacenter) -> List[vim.VirtualMachine]:
+        """
+        Get all vms belonging to a given datacenter
+        """
+        return self.get_all(datacenter, vim.VirtualMachine)
 
     @typic.al
     def is_valid_run_tools(self, vm: vim.VirtualMachine) -> bool:
@@ -477,8 +521,9 @@ class Client:
         }
 
     def get_datastore_infos(self, datastore) -> Mapping:
-        """Get minimal informations of Datastore
+        """Get minimal informations of Datastore"""
 
+        """
         Example return:
         {
             'id': 'xxx',

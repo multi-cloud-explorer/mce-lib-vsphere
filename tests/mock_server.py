@@ -35,10 +35,12 @@ def vcsim_settings():
         datacenters=2,
         clusters=2, # datacenters * 2
         datastores=4,
-        storage=2,
+        storages=2,
         pools=1,
         hosts=3,    # 14 ???
-        vms=10 # 60
+        vms=10, # 60
+        vapps=2,
+        opaque_networks=1
     )
     # 10 resource pool
 
@@ -50,7 +52,7 @@ def start_service(service_name, host, port, vcsim_settings):
     vcsim_settings["host"] = host
     vcsim_settings["port"] = port
 
-    args = "%(vcsim_path)s -api-version %(api_version)s -dc %(datacenters)s -cluster %(clusters)s -pool %(pools)s -host %(hosts)s -ds %(datastores)s -pod %(storage)s -vm %(vms)s -l %(host)s:%(port)s -username %(username)s -password %(password)s -trace" % vcsim_settings
+    args = "%(vcsim_path)s -api-version %(api_version)s -dc %(datacenters)s -cluster %(clusters)s -pool %(pools)s -host %(hosts)s -ds %(datastores)s -pod %(storages)s -vm %(vms)s -app %(vapps)s -nsx %(opaque_networks)s -l %(host)s:%(port)s -username %(username)s -password %(password)s -trace" % vcsim_settings
     # vcsim -api-version 6.5 -dc 2 -cluster 2 -pool 1 -host 3 -ds 4 -pod 2 -vm 10 -l 127.0.0.1:1024 -username user1 -password pass -trace
 
     process = sp.Popen(args.split(), stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.DEVNULL)

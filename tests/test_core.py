@@ -2,6 +2,7 @@ from pprint import pprint
 
 from freezegun import freeze_time
 import pytest
+from pyVmomi import vim
 
 from mce_lib_vsphere import core
 
@@ -116,7 +117,14 @@ def test_get_all_folders(vsphere_server, vcsim_settings):
     with core.Client(host=url) as client:
         client.connect()
         objects = client.get_all_folders()
+
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.Folder) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-3'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_hosts(vsphere_server, vcsim_settings):
@@ -127,6 +135,15 @@ def test_get_all_hosts(vsphere_server, vcsim_settings):
         objects = client.get_all_hosts()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.HostSystem) is True
+
+        #for host in objects:
+        #    print(client.resource_id(host))
+
+        resource_id = client.resource_id(objects[0])
+        #FIXME: assert resource_id == 'group-d1/datacenter-2/folder-4/clustercomputeresource-30/host-37'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_pools(vsphere_server, vcsim_settings):
@@ -137,7 +154,14 @@ def test_get_all_pools(vsphere_server, vcsim_settings):
         objects = client.get_all_pools()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.ResourcePool) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-4/computeresource-26/resgroup-25'
+
         data = client.dump_to_dict(objects[0])
+
 
 def test_get_all_clusters(vsphere_server, vcsim_settings):
     url = vsphere_server
@@ -147,6 +171,12 @@ def test_get_all_clusters(vsphere_server, vcsim_settings):
         objects = client.get_all_clusters()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.ClusterComputeResource) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-4/clustercomputeresource-30'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_datacenters(vsphere_server, vcsim_settings):
@@ -157,6 +187,12 @@ def test_get_all_datacenters(vsphere_server, vcsim_settings):
         objects = client.get_all_datacenters()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.Datacenter) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_datastores(vsphere_server, vcsim_settings):
@@ -167,6 +203,13 @@ def test_get_all_datastores(vsphere_server, vcsim_settings):
         objects = client.get_all_datastores()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.Datastore) is True
+
+        resource_id = client.resource_id(objects[0])
+        # FIXME: 
+        #assert resource_id == 'group-d1/datacenter-2/folder-5//tmp/govcsim-dc0-localds_0-150284432@folder-5'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_vms(vsphere_server, vcsim_settings):
@@ -177,6 +220,12 @@ def test_get_all_vms(vsphere_server, vcsim_settings):
         objects = client.get_all_vms()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.VirtualMachine) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-3/vm-231'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_dvswitches(vsphere_server, vcsim_settings):
@@ -187,6 +236,12 @@ def test_get_all_dvswitches(vsphere_server, vcsim_settings):
         objects = client.get_all_dvswitches()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.DistributedVirtualSwitch) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-6/dvs-11'
+
         data = client.dump_to_dict(objects[0])
 
 def test_get_all_dport_groups(vsphere_server, vcsim_settings):
@@ -197,6 +252,92 @@ def test_get_all_dport_groups(vsphere_server, vcsim_settings):
         objects = client.get_all_dport_groups()
 
         assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.dvs.DistributedVirtualPortgroup) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-6/dvportgroup-13'
+
+        data = client.dump_to_dict(objects[0])
+
+def test_get_all_virtualapps(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_virtualapps()
+
+        assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.VirtualApp) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-4/clustercomputeresource-30/resgroup-29/virtualapp-56'
+
+        # FIXME: data = client.dump_to_dict(objects[0])
+
+def test_get_all_networks(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_networks()
+
+        assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.Network) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-6/network-7'
+
+        data = client.dump_to_dict(objects[0])
+
+def test_get_all_opaque_networks(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_opaque_networks()
+
+        assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.OpaqueNetwork) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-6/opaquenetwork-16'
+
+        data = client.dump_to_dict(objects[0])
+
+def test_get_all_compute_resources(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_compute_resources()
+
+        assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.ComputeResource) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-4/computeresource-26'
+
+        data = client.dump_to_dict(objects[0])
+
+def test_get_all_storage_pods(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_storage_pods()
+
+        assert len(objects) > 0
+
+        assert isinstance(objects[0], vim.StoragePod) is True
+
+        resource_id = client.resource_id(objects[0])
+        assert resource_id == 'group-d1/datacenter-2/folder-5/storagepod-8'
+
         data = client.dump_to_dict(objects[0])
 
 @pytest.mark.skip("FIXME data values")
@@ -469,3 +610,4 @@ def test_resource_id(vsphere_server):
         dc = client.get_all_datacenters()[0]
         resource_id = client.resource_id(dc)
         assert resource_id == 'group-d1/datacenter-2'
+
