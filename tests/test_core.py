@@ -161,13 +161,14 @@ def test_get_current_session(vsphere_server, vcsim_settings):
         pprint(data)
         del data['loginTime'] # FIXME: bug avec freeze_time
         del data['callCount']
+        del data['userAgent']
         assert data == {
             #'callCount': 4,
             'fullName': vcsim_settings["username"],
             'ipAddress': '127.0.0.1',
             'locale': 'en_US',
             #'loginTime': "", # https://github.com/vmware/pyvmomi/blob/master/tests/test_iso8601.py#L62
-            'userAgent': 'pyvmomi Python/3.7.6 (Linux; 5.3.16-300.fc31.x86_64; x86_64)',
+            #'userAgent': 'pyvmomi Python/3.7.6 (Linux; 5.3.16-300.fc31.x86_64; x86_64)',
             'userName': vcsim_settings["username"]
         }
 
