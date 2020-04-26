@@ -163,7 +163,7 @@ class Client:
             logger.warning(str(err))
 
     @typic.al
-    def connect(self) -> Tuple[vim.ServiceInstance, vim.ServiceInstanceContent]:
+    def connect(self):
         """Connect to Vcenter Server"""
 
         context = None
@@ -195,8 +195,6 @@ class Client:
             self.si = si
             self.content = si.RetrieveContent()
             self.is_connected = True
-
-            return self.si, self.content
 
         except IOError as e:
             if self.debug:
@@ -503,7 +501,7 @@ class Client:
             "numEffectiveHosts": cluster.summary.numEffectiveHosts,
         }
 
-    def get_host_infos(self, host):
+    def get_host_infos(self, host) -> Mapping:
         product = host.config.product
         return {
             "name": host.name,
@@ -552,6 +550,7 @@ class Client:
             "maintenance_mode": datastore.summary.maintenanceMode
         }
 
+    @typic.al
     def get_custom_fields(self, vm: vim.VirtualMachine) -> Mapping:
         fields = {}
         for availableField in vm.availableField:
@@ -565,9 +564,11 @@ class Client:
 
         return fields
 
-    def getNICs(self, summary, guest):
+    @typic.al
+    @typic.al
+    def getNICs(self, vm: vim.VirtualMachine) -> Mapping:
         nics = {}
-        for nic in guest.net:
+        for nic in vm.guest.net:
             if nic.network:  # Only return adapter backed interfaces
                 if nic.ipConfig is not None and nic.ipConfig.ipAddress is not None:
                     nics[nic.macAddress] = {}  # Use mac as uniq ID for nic
@@ -587,46 +588,66 @@ class Client:
 
     @typic.al
     def _get_vm_infos(self, vm: vim.VirtualMachine) -> Mapping:
-        summary = vm.summary
-        guest = vm.guest
-        config = summary.config
 
-        vmsum = {}
+        vmsum = {
+            "boot_time": None,
+            "create_date": None # Since vSphere API 6.7
+        }
+        vmsum['vm_path_name'] = vm.summary.config.vmPathName # '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx'
+
         vmsum['name'] = vm.name # TODO: vérifier si vm.name et config.name sont toujours pareil
-        vmsum['uuid'] = config.instanceUuid
-        vmsum['bios_uuid'] = config.uuid
+        vmsum['uuid'] = vm.config.instanceUuid
+        vmsum['bios_uuid'] = vm.config.uuid
         vmsum['hostname'] = vm.guest.hostName
-        vmsum['is_template'] = config.template
-        vmsum['mem'] = config.memorySizeMB / 1024
-        vmsum['diskGB'] = summary.storage.committed / 1024**3
-        vmsum['cpu'] = config.numCpu
-        vmsum['path'] = config.vmPathName# '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx'
-        vmsum['ostype'] = config.guestFullName
-        vmsum['state'] = summary.runtime.powerState
-        vmsum['annotation'] = config.annotation if config.annotation else ''
-        vmsum['net'] = self.getNICs(summary, guest)
+
+        vmsum['is_template'] = vm.config.template
+
+        vmsum['diskGB'] = vm.summary.storage.committed / 1024**3
+
+        hardware = vm.config.hardware
+        vmsum['cpu_count'] = hardware.numCPU
+        vmsum['cpu_cores'] = hardware.numCoresPerSocket
+        vmsum['mem_mb'] = hardware.memoryMB
+
+        #vmsum['mem'] = vm.summary.config.memorySizeMB / 1024
+
+        vmsum['ostype'] = vm.config.guestFullName
+
+        vmsum['state'] = vm.summary.runtime.powerState
+
+        vmsum['annotation'] = vm.config.annotation if vm.config.annotation else ''
+
+        if not vm.config.template and getattr(vm.summary.runtime, "bootTime", None):
+            vmsum['boot_time'] = Iso8601.ISO8601Format(vm.summary.runtime.bootTime)
+
+        if getattr(vm.config, "createDate", None):
+            vmsum['create_date'] = Iso8601.ISO8601Format(vm.config.createDate)
+
+        vmsum['guestFamily'] = vm.guest.guestFamily    # 'otherGuestFamily',
+
+        vmsum['toolsVersion'] = vm.guest.toolsVersion  # '2147483647',
+
+        if getattr(vm.guest, 'toolsVersionStatus2', None):
+            vmsum['toolsVersionStatus'] = vm.guest.toolsVersionStatus2
+        elif getattr(vm.guest, 'toolsVersionStatus', None):
+            vmsum['toolsVersionStatus'] = vm.guest.toolsVersionStatus
+
+        if hasattr(vm.guest, 'toolsStatus2'):
+            vmsum['toolsStatus'] = vm.guest.toolsStatus2    # 'toolsOk',
+        elif hasattr(vm.guest, 'toolsStatus'):
+            vmsum['toolsStatus'] = vm.guest.toolsStatus    # 'toolsOk',
+
+        vmsum['toolsRunningStatus'] = vm.guest.toolsRunningStatus    # ?
+        vmsum['guestState'] = vm.guest.guestState      # 'running',
+        vmsum['guestOperationsReady'] = vm.guest.guestOperationsReady # true
+        vmsum['interactiveGuestOperationsReady'] = vm.guest.interactiveGuestOperationsReady    # false,
+        vmsum['guestStateChangeSupported'] = vm.guest.guestStateChangeSupported  # true,
+
+        vmsum['net'] = self.getNICs(vm)
+
         vmsum['fields'] = self.get_custom_fields(vm)
-        #vmsum['boot_time'] = summary.runtime.bootTime # FIXME: arrow.get(summary.runtime.bootTime).for_json()
-        vmsum['boot_time'] = Iso8601.ISO8601Format(summary.runtime.bootTime)
 
-        vmsum['guestFamily'] = guest.guestFamily    # 'otherGuestFamily',
-        vmsum['toolsVersion'] = guest.toolsVersion  # '2147483647',
 
-        if getattr(guest, 'toolsVersionStatus2', None):
-            vmsum['toolsVersionStatus'] = guest.toolsVersionStatus2
-        elif getattr(guest, 'toolsVersionStatus', None):
-            vmsum['toolsVersionStatus'] = guest.toolsVersionStatus 
-
-        if hasattr(guest, 'toolsStatus2'):
-            vmsum['toolsStatus'] = guest.toolsStatus2    # 'toolsOk',
-        elif hasattr(guest, 'toolsStatus'):
-            vmsum['toolsStatus'] = guest.toolsStatus    # 'toolsOk',
-
-        vmsum['toolsRunningStatus'] = guest.toolsRunningStatus    # ?
-        vmsum['guestState'] = guest.guestState      # 'running',
-        vmsum['guestOperationsReady'] = guest.guestOperationsReady # true
-        vmsum['interactiveGuestOperationsReady'] = guest.interactiveGuestOperationsReady    # false,
-        vmsum['guestStateChangeSupported'] = guest.guestStateChangeSupported  # true,
         return vmsum
 
     @typic.al

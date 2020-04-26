@@ -42,6 +42,8 @@ def test_parse_url():
 
     assert client.is_ssl is False
 
+    # TODO: test bad url
+
 def test_connect(vsphere_server):
     url = vsphere_server
 
@@ -88,7 +90,7 @@ def test_authentication_error(vsphere_server):
 
     # TODO: FatalError
 
-@test.mark.mce_todo
+@pytest.mark.mce_todo
 def reuse_session():
     # TODO: test connect autre instance avec le meme token
     pass
@@ -571,17 +573,17 @@ def test__get_vm_infos(vsphere_server, vcsim_settings):
         objects = client.get_all_vms()
 
         data = client._get_vm_infos(objects[0])
-        pprint(data)
+        #pprint(data)
         del data['boot_time'] # FIXME
-        del data['mem'] # FIXME
+        del data['mem_mb'] # FIXME
 
         assert data == {
             'annotation': '',
-            'name': 'DC0_H0_VM0',
             'bios_uuid': '265104de-1472-547c-b873-6dc7883fb6cb',
-            'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
-            #'boot_time': None,
-            'cpu': 1,
+            #'boot_time': '2020-04-26T20:55:35.8409+02:00',
+            'cpu_cores': 1,
+            'cpu_count': 1,
+            'create_date': None,
             'diskGB': 0.0,
             'fields': {},
             'guestFamily': 'linuxGuest',
@@ -591,19 +593,23 @@ def test__get_vm_infos(vsphere_server, vcsim_settings):
             'hostname': None,
             'interactiveGuestOperationsReady': None,
             'is_template': False,
-            #'mem': 0.03125,
+            #'mem_mb': 32,
+            'name': 'DC0_H0_VM0',
             'net': {},
             'ostype': 'otherGuest',
-            'path': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx',
             'state': 'poweredOn',
             'toolsRunningStatus': 'guestToolsNotRunning',
             'toolsStatus': 'toolsNotInstalled',
-            'toolsVersion': '0'
+            'toolsVersion': '0',
+            'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
+            'vm_path_name': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx'
         }
 
 # FIXME: @freeze_time("2019-01-01")
 def test_get_vm_infos(vsphere_server, vcsim_settings):
     url = vsphere_server
+
+    # FIXME: A faire sur un template
 
     with core.Client(host=url) as client:
         client.connect()
@@ -613,16 +619,17 @@ def test_get_vm_infos(vsphere_server, vcsim_settings):
         #pprint(data)
 
         del data['vm']['boot_time'] # FIXME
-        del data['vm']['mem'] # FIXME
+        del data['vm']['mem_mb'] # FIXME
         del data['properties'] # TODO: properties
+
         assert data == {
             "vm": {
                 'annotation': '',
-                'name': 'DC0_H0_VM0',
                 'bios_uuid': '265104de-1472-547c-b873-6dc7883fb6cb',
-                'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
-                # 'boot_time': None,
-                'cpu': 1,
+                # 'boot_time': '2020-04-26T20:55:35.8409+02:00',
+                'cpu_cores': 1,
+                'cpu_count': 1,
+                'create_date': None,
                 'diskGB': 0.0,
                 'fields': {},
                 'guestFamily': 'linuxGuest',
@@ -632,14 +639,16 @@ def test_get_vm_infos(vsphere_server, vcsim_settings):
                 'hostname': None,
                 'interactiveGuestOperationsReady': None,
                 'is_template': False,
-                #'mem': 0.03125,
+                # 'mem_mb': 32,
+                'name': 'DC0_H0_VM0',
                 'net': {},
                 'ostype': 'otherGuest',
-                'path': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx',
                 'state': 'poweredOn',
                 'toolsRunningStatus': 'guestToolsNotRunning',
                 'toolsStatus': 'toolsNotInstalled',
-                'toolsVersion': '0'
+                'toolsVersion': '0',
+                'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
+                'vm_path_name': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx'
             },
         }
 
