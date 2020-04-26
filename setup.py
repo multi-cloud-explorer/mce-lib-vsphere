@@ -3,12 +3,13 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'requests[security]>=2.23.0,<3',
-    'pyvmomi>=7,<8',
+    'pyvmomi>=6.5,<=7',
     'python-decouple',
     'furl',
     'click',
-    'typical>=1.10.5,<2',
-    'arrow==0.14.5',
+    'typical>=2.0,<3.0',
+
+    'pytest>=5.4.1',  # for mce_django_app.pytest.plugin
 ]
 
 tests_requires = [
