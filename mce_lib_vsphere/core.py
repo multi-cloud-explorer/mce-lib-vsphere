@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 VCENTER_URL = config('MCE_VCENTER_URL', 'https://user1:pass@127.0.0.1:8989/sdk?timeout=120')
 VCENTER_TIMEOUT = config("MCE_VCENTER_TIMEOUT", default=60, cast=int)  # 1mn
 
+# TODO: se in get_vm_roles
 ROLES = {
     -1: "Administrator",
     -4: "Anonymous",
@@ -32,6 +33,7 @@ ROLES = {
     -3: "View",
 }
 
+# TODO: move to exceptions module
 class FatalError(Exception):
     pass
 
@@ -61,6 +63,7 @@ class GuestError(FatalError):
 
 
 class Client:
+    """Client SDK for Vcenter"""
 
     @typic.al
     def __init__(
@@ -125,7 +128,10 @@ class Client:
 
         self.is_connected = False
 
-    def parse_url(self, url):
+    @typic.al
+    def parse_url(self, url: str):
+        """Parse settings with URL"""
+
         url = furl(url)
 
         if url.scheme == "http": # url.origin.startswith('http:'):
@@ -163,6 +169,7 @@ class Client:
         self.disconnect()
 
     def disconnect(self):
+        """Current session disconnect"""
         try:
             Disconnect(self.si)
         except Exception as err:
@@ -170,10 +177,8 @@ class Client:
 
     @typic.al
     def connect(self) -> Tuple[vim.ServiceInstance, vim.ServiceInstanceContent]:
-        """
-        :return: SI, Content
-        :rtype: vim.ServiceInstanceContent
-        """
+        """Connect to Vcenter Server"""
+
         context = None
         protocol = 'http'
         if self.is_ssl:
@@ -232,7 +237,10 @@ class Client:
             self.recursive_parents(obj.parent, parents)
         parents.append(obj)
      
+    @typic.al
     def resource_id(self, obj) -> str:
+        """Build unique ID with obj._moId and parents"""
+
         # TODO: version avec que l'id sans le typee avant
         parents = []
         self.recursive_parents(obj, parents)
@@ -256,7 +264,10 @@ class Client:
             elif c.name == name:
                 return c
 
+    @typic.al
     def vcenter_infos(self) -> Mapping:
+        """Return informations about Vcenter"""
+
         about = self.content.about
         return {
             "version": about.version,  # '6.5.0',
@@ -319,6 +330,7 @@ class Client:
 
     @typic.al
     def get_all_folders(self) -> List[vim.Folder]:
+        """Return List of folders children"""
         return self.get_all(self.content.rootFolder, vim.Folder)
 
     @typic.al
