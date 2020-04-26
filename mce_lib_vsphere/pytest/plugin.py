@@ -1,3 +1,4 @@
+import os
 import shutil
 import signal
 import subprocess as sp
@@ -7,6 +8,9 @@ import socket
 from pyVim import connect
 
 import pytest
+
+HERE = os.path.dirname(__file__)
+LOCAL_VCSIM = os.path.join(HERE, '..', '..', 'utils', 'vcsim')
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "mce_known_bug: mark test as known bug")
@@ -28,7 +32,9 @@ def get_free_tcp_port(port=1024, max_port=65535):
 def vcsim_settings():
     vcsim_path = shutil.which('vcsim')
     if  not vcsim_path:
-        raise AssertionError("vcsim tools is not found")
+        vcsim_path = LOCAL_VCSIM
+        if not os.path.exists(vcsim_path):
+            raise AssertionError("vcsim tools is not found")
     return dict(
         vcsim_path=vcsim_path,
         api_version="6.5",
