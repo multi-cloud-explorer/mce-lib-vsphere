@@ -3,8 +3,10 @@ from pprint import pprint
 from freezegun import freeze_time
 import pytest
 from pyVmomi import vim
+from furl import furl
 
 from mce_lib_vsphere import core
+from mce_lib_vsphere import exceptions
 
 def test_parse_url():
 
@@ -13,7 +15,7 @@ def test_parse_url():
     assert client.host == "127.0.0.1"
     assert client.port == 443
     assert client.path == "/sdk"
-    assert client.timeout == core.VCENTER_TIMEOUT
+    assert client.timeout == 60
     assert client.pool_size == 5
     assert client.username is None
     assert client.password is None
@@ -43,10 +45,14 @@ def test_parse_url():
 def test_connect(vsphere_server):
     url = vsphere_server
 
+    # TODO: test with environ varialble for URL
+
     client = core.Client(host=url)
     assert client.is_ssl is True
+
     client.connect()
     assert client.is_connected is  True
+
     assert len(client.get_all_datacenters()) == 2
     client.disconnect()
 
@@ -54,12 +60,63 @@ def test_connect(vsphere_server):
         client.connect()
         assert len(client.get_all_datacenters()) > 0
 
-@pytest.mark.skip("TODO")
+def test_timeout_connect():
+
+    client = core.Client(host="127.0.0.2", username="user", password="pass", timeout=2)
+
+    msg = "Connection could not be established for host [127.0.0.2:443] with timeout [2]"
+
+    with pytest.raises(exceptions.ConnectionError) as excinfo:
+        client.connect()
+    assert str(excinfo.value) == msg
+
+def test_authentication_error(vsphere_server):
+    url = vsphere_server
+    url = furl(url)
+
+    client = core.Client(host=url.host, port=url.port, username=url.username, password="badpass")
+
+    with pytest.raises(exceptions.AuthenticationError) as excinfo:
+        client.connect()
+    assert str(excinfo.value) == "invalid authentication for [user1]"
+
+    client = core.Client(host=url.host, port=url.port, username="BADUSER", password="badpass")
+
+    with pytest.raises(exceptions.AuthenticationError) as excinfo:
+        client.connect()
+    assert str(excinfo.value) == "invalid authentication for [BADUSER]"
+
+    # TODO: FatalError
+
+@test.mark.mce_todo
 def reuse_session():
     # TODO: test connect autre instance avec le meme token
     pass
+    # from mce_lib_vsphere.core import Client
+    # client = Client('https://user:pass@127.0.0.1:8989/sdk')
+    # si, content = client.connect()
+    # stub = si._stub
+    #
+    # soapStub = SoapStubAdapter(host="127.0.0.1", port=8989)
+    # si2 = vim.ServiceInstance("ServiceInstance",soapStub)
+    # sessionCookie = stub.cookie
+    # httpContext = VmomiSupport.GetHttpContext()
+    # cookie = cookies.SimpleCookie()
+    # cookie["vmware_soap_session"] = sessionCookie
+    # httpContext["cookies"] = cookie
+    # VmomiSupport.GetRequestContext()["vcSessionCookie"] = sessionCookie
+    # hostname = stub.host.split(":")[0]
+    # port = int(stub.host.split(":")[1])
+    # context = None
+    # if hasattr(ssl, "_create_unverified_context"):
+    #     context = ssl._create_unverified_context()
+    # stub2 = pyVmomi.SoapStubAdapter(host=hostname, port=port, sslContext=context)
+    # si2 = vim.ServiceInstance("ServiceInstance", stub2)
+    # content = si2.RetrieveContent()
+    # content.about
 
-@pytest.mark.skip("TODO")
+
+@pytest.mark.mce_todo
 def test_get_all(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -67,7 +124,7 @@ def test_get_all(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_dump_to_dict(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -92,21 +149,21 @@ def test_vcenter_infos(vsphere_server, vcsim_settings):
              'version': '6.5.0'
         }
 
-# FIXME: @freeze_time("2019-01-01")
-@pytest.mark.skip("TODO")
+#@freeze_time("2019-01-01", tz_offset=-4)
 def test_get_current_session(vsphere_server, vcsim_settings):
     url = vsphere_server
 
     with core.Client(host=url) as client:
         client.connect()
         data = client.get_current_session()
-        #pprint(data)
+        pprint(data)
+        del data['loginTime'] # FIXME: bug avec freeze_time
         assert data == {
             'callCount': 4,
             'fullName': vcsim_settings["username"],
             'ipAddress': '127.0.0.1',
             'locale': 'en_US',
-            'loginTime': "", # https://github.com/vmware/pyvmomi/blob/master/tests/test_iso8601.py#L62
+            #'loginTime': "", # https://github.com/vmware/pyvmomi/blob/master/tests/test_iso8601.py#L62
             'userAgent': 'pyvmomi Python/3.7.6 (Linux; 5.3.16-300.fc31.x86_64; x86_64)',
             'userName': vcsim_settings["username"]
         }
@@ -336,7 +393,6 @@ def test_get_all_storage_pods(vsphere_server, vcsim_settings):
         assert isinstance(objects[0], vim.StoragePod) is True
 
         resource_id = client.resource_id(objects[0])
-        assert resource_id == 'group-d1/datacenter-2/folder-5/storagepod-8'
 
         data = client.dump_to_dict(objects[0])
 
@@ -453,15 +509,52 @@ def test_get_datastore_infos(vsphere_server, vcsim_settings):
         }
 
 
-@pytest.mark.skip("TODO")
+def test_search_vm_by_uuid(vsphere_server, vcsim_settings):
+    url = vsphere_server
+
+    with core.Client(host=url) as client:
+        client.connect()
+        objects = client.get_all_vms()
+
+        vm = objects[0]
+        resource_id = client.resource_id(vm)
+
+        instance_uuid = vm.summary.config.instanceUuid
+        vm_found = client.search_vm_by_uuid(instance_uuid)
+        assert vm_found is not None
+        assert resource_id == client.resource_id(vm_found)
+
+        bios_uuid = vm.summary.config.uuid
+        vm_found = client.search_vm_by_uuid(bios_uuid, False)
+        assert vm_found is not None
+        assert resource_id == client.resource_id(vm_found)
+
+        vm_not_found = client.search_vm_by_uuid("baduuid")
+        assert vm_not_found is None
+
 def test_get_vm_by_name(vsphere_server, vcsim_settings):
     url = vsphere_server
 
     with core.Client(host=url) as client:
         client.connect()
-        raise NotImplementedError()
+        objects = client.get_all_vms()
 
-@pytest.mark.skip("TODO")
+        # vm found success
+        vm = client.get_vm_by_name(objects[0].name)
+        assert vm is not None
+
+        # vm not found without Exception
+        vm = client.get_vm_by_name("BADNAME")
+        assert vm is None
+
+        # vm not found with VmNotFoundError Exception
+        msg = f"vm [BADNAME] not found in vcenter [{client.host}:{client.port}] for username [{client.username}]"
+        with pytest.raises(exceptions.VmNotFoundError) as excinfo:
+            vm = client.get_vm_by_name("BADNAME", raise_error=True)
+        assert str(excinfo.value) == msg
+
+
+@pytest.mark.mce_todo
 def test_getNICs(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -478,11 +571,15 @@ def test__get_vm_infos(vsphere_server, vcsim_settings):
         objects = client.get_all_vms()
 
         data = client._get_vm_infos(objects[0])
-        #pprint(data)
+        pprint(data)
         del data['boot_time'] # FIXME
         del data['mem'] # FIXME
+
         assert data == {
             'annotation': '',
+            'name': 'DC0_H0_VM0',
+            'bios_uuid': '265104de-1472-547c-b873-6dc7883fb6cb',
+            'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
             #'boot_time': None,
             'cpu': 1,
             'diskGB': 0.0,
@@ -495,7 +592,6 @@ def test__get_vm_infos(vsphere_server, vcsim_settings):
             'interactiveGuestOperationsReady': None,
             'is_template': False,
             #'mem': 0.03125,
-            'name': 'DC0_H0_VM0',
             'net': {},
             'ostype': 'otherGuest',
             'path': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx',
@@ -522,6 +618,9 @@ def test_get_vm_infos(vsphere_server, vcsim_settings):
         assert data == {
             "vm": {
                 'annotation': '',
+                'name': 'DC0_H0_VM0',
+                'bios_uuid': '265104de-1472-547c-b873-6dc7883fb6cb',
+                'uuid': 'b4689bed-97f0-5bcd-8a4c-07477cc8f06f',
                 # 'boot_time': None,
                 'cpu': 1,
                 'diskGB': 0.0,
@@ -534,7 +633,6 @@ def test_get_vm_infos(vsphere_server, vcsim_settings):
                 'interactiveGuestOperationsReady': None,
                 'is_template': False,
                 #'mem': 0.03125,
-                'name': 'DC0_H0_VM0',
                 'net': {},
                 'ostype': 'otherGuest',
                 'path': '[LocalDS_0] DC0_H0_VM0/DC0_H0_VM0.vmx',
@@ -545,7 +643,7 @@ def test_get_vm_infos(vsphere_server, vcsim_settings):
             },
         }
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_get_custom_fields(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -553,7 +651,7 @@ def test_get_custom_fields(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_get_object_by_name(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -561,7 +659,7 @@ def test_get_object_by_name(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_is_valid_run_tools(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -569,7 +667,7 @@ def test_is_valid_run_tools(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_is_valid_tools(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -577,7 +675,7 @@ def test_is_valid_tools(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_is_power_on(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -585,7 +683,7 @@ def test_is_power_on(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
+@pytest.mark.mce_todo
 def test_is_vm_ready(vsphere_server, vcsim_settings):
     url = vsphere_server
 
@@ -593,15 +691,15 @@ def test_is_vm_ready(vsphere_server, vcsim_settings):
         client.connect()
         raise NotImplementedError()
 
-@pytest.mark.skip("TODO")
 def test_get_vm_roles(vsphere_server, vcsim_settings):
     url = vsphere_server
 
     with core.Client(host=url) as client:
         client.connect()
-        raise NotImplementedError()
+        objects = client.get_all_vms()
+        roles = client.get_vm_roles(objects[0])
+        assert roles == ["ADMINISTRATOR"]
 
-@pytest.mark.skip("TODO Important")
 def test_resource_id(vsphere_server):
     url = vsphere_server
 
