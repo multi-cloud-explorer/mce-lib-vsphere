@@ -1,4 +1,4 @@
-## Multi-Cloud-Explorer - VMware (Vsphere)
+# Multi-Cloud-Explorer - VMware (Vsphere)
 
 Inventory library for VMware (Vsphere Release)
 
@@ -8,15 +8,16 @@ Inventory library for VMware (Vsphere Release)
 [![codecov](https://codecov.io/gh/multi-cloud-explorer/mce-lib-vsphere/branch/master/graph/badge.svg)](https://codecov.io/gh/multi-cloud-explorer/mce-lib-vsphere)
 [![Code Health](https://landscape.io/github/multi-cloud-explorer/mce-lib-vsphere/master/landscape.svg?style=flat)](https://landscape.io/github/multi-cloud-explorer/mce-lib-vsphere/master)
 [![Requirements Status](https://requires.io/github/multi-cloud-explorer/mce-lib-vsphere/requirements.svg?branch=master)](https://requires.io/github/multi-cloud-explorer/mce-lib-vsphere/requirements/?branch=master)
+[![Documentation Status](https://readthedocs.org/projects/mce-lib-vpshere/badge/?version=latest&style=flat-square)](https://mce-lib-vpshere.readthedocs.org)
 
-[Documentation](https://multi-cloud-explorer.readthedocs.org)
+**Inventory library for VMware (Vsphere Release)**
 
 ### Features
 
-- [X] List all datacenters
-- [X] List all clusters
-- [X] List all datastores
-- [X] List all virtual machines
+- [X] List all Datacenter
+- [X] List all Cluster
+- [X] List all Datastores
+- [X] List all Virtual Machines
 - [ ] Command line client
 
 ### Installation
@@ -122,4 +123,14 @@ def test_get_all_vms(vsphere_server, vcsim_settings):
 - [ ] Sphinx doc
 - [ ] Terraform templates ou Pulumi code for IAC
 - [ ] Contrib doc
+
+### Similar Python Projects
+
+- [pyVirtualize](https://github.com/rocky1109/pyVirtualize)
+- [vcdriver](https://github.com/Osirium/vcdriver)
+- [py-vpoller](https://github.com/dnaeon/py-vpoller)
+- [py-vconnector](https://github.com/dnaeon/py-vconnector)
+- [ezmomi](https://github.com/snobear/ezmomi)
+- [vcdriver](https://github.com/Lantero/vcdriver)
+- [shortmomi](https://github.com/pschmitt/shortmomi)
 

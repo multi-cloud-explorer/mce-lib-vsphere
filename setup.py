@@ -1,6 +1,8 @@
 import os
 from setuptools import setup, find_packages
 
+import versioneer
+
 install_requires = [
     'requests[security]>=2.23.0,<3',
     'pyvmomi>=6.5,<=7',
@@ -33,16 +35,22 @@ dev_requires = [
 ]
 
 doc_requires = [
-    'Sphinx',
+    'Sphinx>=3.0',
     'sphinx_rtd_theme',
     'sphinx-click',
     'sphinx-autodoc-typehints'
+]
+
+ci_requires = [
+    'coveralls',
+    'codecov',
 ]
 
 extras_requires = {
     'tests': tests_requires,
     'dev': dev_requires,
     'doc': doc_requires,
+    'ci': ci_requires
 }
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -52,13 +60,15 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='mce-lib-vsphere',
-    version="0.1.0",
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     description='Inventory library for VMware (Vsphere Release)',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/multi-cloud-explorer/mce-lib-vsphere.git',
     packages=find_packages(exclude=("tests",)),
     include_package_data=True, 
+    setup_requires=["pytest-runner"],
     tests_require=tests_requires,
     install_requires=install_requires,
     extras_require=extras_requires,

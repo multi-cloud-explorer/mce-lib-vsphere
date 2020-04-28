@@ -4,7 +4,7 @@ import traceback
 import re
 import json
 from typing import List, Tuple, Any, Mapping, Union
-from enum import IntEnum, unique
+from enum import Enum, IntEnum, unique
 
 import typic
 from decouple import config
@@ -26,6 +26,32 @@ logger = logging.getLogger(__name__)
 VCENTER_URL = config('MCE_VCENTER_URL', 'https://user1:pass@127.0.0.1:8989/sdk?timeout=120')
 
 @unique
+class ResourceTypes(str, Enum):
+    DATACENTER = "vmware/Datacenter"
+    VIRTUAL_APP = "vmware/VirtualApp"
+    CLUSTER_COMPUTE_RESOURCE = "vmware/ClusterComputeResource"
+    FOLDER = "vmware/Folder"
+    DISTRIBUTED_VIRTUAL_PORTGROUP = "vmware/DistributedVirtualPortgroup"
+    HOST_SYSTEM = "vmware/HostSystem"
+    VIRTUAL_MACHINE = "vmware/VirtualMachine"
+    NETWORK = "vmware/Network"
+    OPAQUE_NETWORK = "vmware/OpaqueNetwork"
+    RESOURCE_POOL = "vmware/ResourcePool"
+    COMPUTE_RESOURCE = "vmware/ComputeResource" # ESX ?
+    DATASTORE = "vmware/Datastore"
+    DISTRIBUTED_VIRTUAL_SWITCH = "vmware/DistributedVirtualSwitch"
+
+    @classmethod
+    def to_choices(cls):
+        return [(e.value, e.name) for e in cls]
+
+    @classmethod
+    def to_dict(cls, reverse=False):
+        if reverse:
+            return {e.value: e.name for e in cls}
+        return {e.name: e.value for e in cls}
+
+@unique
 class EffectiveRoles(IntEnum):
     ADMINISTRATOR = -1
     READ_ONLY = -2
@@ -34,7 +60,7 @@ class EffectiveRoles(IntEnum):
     NO_ACCESS = -5
 
     @classmethod
-    def to_choices(cls, reverse=False):
+    def to_choices(cls):
         return [(e.value, e.name) for e in cls]
 
     @classmethod

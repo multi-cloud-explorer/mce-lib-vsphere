@@ -2,6 +2,7 @@
 data/
 .coverage
 coverage.xml
+.eggs/
 *.egg-info
 .env*
 *.pid
