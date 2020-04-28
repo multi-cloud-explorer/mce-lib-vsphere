@@ -47,7 +47,7 @@ pathspec==0.8.0
 pbr==5.4.5
 pep8==1.7.1
 pycodestyle==2.5.0
-pyflakes==2.1.1
+pyflakes==2.2.0
 pytest-cache==1.0
 pytest-cov==2.8.1
 pytest-flake8==1.0.5
