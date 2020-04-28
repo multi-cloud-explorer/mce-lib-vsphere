@@ -20,6 +20,10 @@ Inventory library for VMware (Vsphere Release)
 - [X] List all Virtual Machines
 - [ ] Command line client
 
+### Demo with Terraform and Vcenter Simulator
+
+> [Open demo-terraform directory](demo-terraform/)
+
 ### Installation
 
 **Requires:**
@@ -29,25 +33,6 @@ Inventory library for VMware (Vsphere Release)
 
 ```bash
 pip install git+https://github.com/multi-cloud-explorer/mce-lib-vpshere.git
-```
-
-### vCenter simulator
-
-- https://github.com/vmware/govmomi/tree/master/vcsim
-
-```bash
-# Usage vcsim binary in mce-lib-vsphere
-curl -L -o ~/bin/vcsim https://raw.githubusercontent.com/multi-cloud-explorer/mce-lib-vpshere/master/tests/utils/vcsim
-chmod +x ~/bin/vcsim
-
-# OR:
-
-# Compile vcsim binary with Docker
-docker run -it --rm -v ~/bin:/gopath/bin nimmis/golang go get -u github.com/vmware/govmomi/vcsim
-sudo chown $USER:$USER ~/bin/vcsim
-
-# Run simulator - 2 datacenters
-~/bin/vcsim -api-version 6.5 -dc 2 -l 127.0.0.1:8989 -username user1 -password pass
 ```
 
 ### Usage
@@ -121,7 +106,7 @@ def test_get_all_vms(vsphere_server, vcsim_settings):
 
 - [ ] Publish to Pypi repository
 - [ ] Sphinx doc
-- [ ] Terraform templates ou Pulumi code for IAC
+- [X] Terraform templates ou Pulumi code for IAC
 - [ ] Contrib doc
 
 ### Similar Python Projects

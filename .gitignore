@@ -1,3 +1,4 @@
+.terraform/
 /traefik/acme
 data/
 .coverage
