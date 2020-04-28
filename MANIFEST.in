@@ -1,0 +1,2 @@
+include versioneer.py
+include mce_lib_vsphere/_version.py
