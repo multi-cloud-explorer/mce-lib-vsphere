@@ -52,7 +52,7 @@ pytest-cache==1.0
 pytest-cov==2.8.1
 pytest-flake8==1.0.5
 pytest-pep8==1.0.6
-PyYAML==5.3.1
+PyYAML==5.4
 regex==2020.4.4
 smmap==3.0.2
 stevedore==1.32.0
