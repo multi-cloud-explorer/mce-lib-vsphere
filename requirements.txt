@@ -93,7 +93,7 @@ wrapt==1.12.1
 # doc
 
 alabaster==0.7.12
-Babel==2.8.0
+Babel==2.9.1
 imagesize==1.2.0
 Jinja2==2.11.2
 MarkupSafe==1.1.1
